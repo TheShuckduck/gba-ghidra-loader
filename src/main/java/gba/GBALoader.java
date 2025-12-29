@@ -23,6 +23,8 @@ import ghidra.app.util.bin.ByteProvider;
 import ghidra.app.util.importer.MessageLog;
 import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
 import ghidra.app.util.opinion.LoadSpec;
+import ghidra.app.util.opinion.Loader;
+import ghidra.app.util.opinion.LoadException;
 import ghidra.app.util.opinion.QueryOpinionService;
 import ghidra.app.util.opinion.QueryResult;
 import ghidra.framework.model.DomainObject;
@@ -127,7 +129,6 @@ public class GBALoader extends AbstractLibrarySupportLoader {
 		return loadSpecs;
 	}
 
-	@Override
 	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
 			Program program, TaskMonitor monitor, MessageLog log)
 			throws CancelledException, IOException {
@@ -613,9 +614,9 @@ public class GBALoader extends AbstractLibrarySupportLoader {
 
 	@Override
 	public List<Option> getDefaultOptions(ByteProvider provider, LoadSpec loadSpec,
-			DomainObject domainObject, boolean isLoadIntoProgram) {
+			DomainObject domainObject, boolean isLoadIntoProgram, boolean mirrorFsLayout) {
 		List<Option> list =
-			super.getDefaultOptions(provider, loadSpec, domainObject, isLoadIntoProgram);
+			super.getDefaultOptions(provider, loadSpec, domainObject, isLoadIntoProgram, mirrorFsLayout);
 
 		// Note: If this loader has custom options, add them to 'list'
 		//list.add(new Option("Option name goes here", "Default option value goes here"));
@@ -631,4 +632,25 @@ public class GBALoader extends AbstractLibrarySupportLoader {
 
 		return super.validateOptions(provider, loadSpec, options, program);
 	}
+
+	@Override
+	protected void load(Program program, Loader.ImporterSettings settings)
+	throws IOException, CancelledException, LoadException {
+    try {
+        load(settings.provider(),       // Changed from byteProvider()
+             settings.loadSpec(),
+             settings.options(),
+             program,
+             settings.monitor(),
+             settings.log());           // Changed from messageLog()
+    } catch (Exception e) {
+        if (e instanceof CancelledException) {
+            throw (CancelledException)e;
+        }
+        if (e instanceof IOException) {
+            throw (IOException)e;
+        }
+        throw new LoadException("Failed to load GBA ROM", e);
+    }
+  }
 }
